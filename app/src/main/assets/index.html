@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>JellyHome</title>
 <style>
 :root{--bg:#0b0d12;--fg:#f2f4f8;--dim:#9aa3b2;--accent:#00a4dc;--card:#1a1f2b}
@@ -153,7 +153,21 @@ input.f.focus{background:#1b2130;color:#fff;border-color:#fff}
   if (!deviceId) { deviceId = 'jh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sset('deviceId', deviceId); }
 
   // ---------- layout ----------
+  // Size of the visible screen in CSS pixels. Inside the app, ask Android directly:
+  // the WebView can report a wrong size while it is still starting up.
+  function viewport() {
+    var w = 0, h = 0;
+    if (B && B.screenSize) { try { var s = String(B.screenSize()).split('x'); w = +s[0]; h = +s[1]; } catch (e) {} }
+    if (!(w > 0 && h > 0)) {
+      var de = document.documentElement;
+      w = Math.min(innerWidth || 1e9, de.clientWidth || 1e9);
+      h = Math.min(innerHeight || 1e9, de.clientHeight || 1e9);
+      if (w === 1e9) w = 1920; if (h === 1e9) h = 1080;
+    }
+    return [w, h];
+  }
   function fit() {
+    var v = viewport(), innerWidth = v[0], innerHeight = v[1];
     var s = Math.min(innerWidth / 1920, innerHeight / 1080), st = $('#stage');
     st.style.transform = 'scale(' + s + ')';
     st.style.left = ((innerWidth - 1920 * s) / 2) + 'px';
@@ -836,7 +850,9 @@ input.f.focus{background:#1b2130;color:#fff;border-color:#fff}
   };
 
   // ---------- boot ----------
-  window.addEventListener('resize', fit); fit();
+  window.jhFit = fit;
+  window.addEventListener('resize', fit); window.addEventListener('load', fit); fit();
+  [100, 400, 1000, 2500].forEach(function (ms) { setTimeout(fit, ms); });
   clock(); setInterval(clock, 10000);
   loadInstalled();
   if (cfg.token || cfg.demo) refresh(true);

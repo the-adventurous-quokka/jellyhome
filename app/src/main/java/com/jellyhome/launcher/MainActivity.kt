@@ -55,6 +55,20 @@ class MainActivity : ComponentActivity() {
             // Most home Jellyfin servers are plain http on the LAN.
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             allowFileAccess = false
+            // Ignore the TV's accessibility text size and any zooming; the page scales itself.
+            textZoom = 100
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
+            useWideViewPort = false
+            loadWithOverviewMode = false
+        }
+        web.setInitialScale(0)
+        web.isVerticalScrollBarEnabled = false
+        web.isHorizontalScrollBarEnabled = false
+        // Re-fit the page whenever the view's real size is known or changes.
+        web.addOnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
+            if (r - l != oldR - oldL || b - t != oldB - oldT) web.evaluateJavascript("window.jhFit && jhFit()", null)
         }
         web.webViewClient = object : WebViewClientCompat() {
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
@@ -120,6 +134,16 @@ class MainActivity : ComponentActivity() {
     }
 
     inner class Bridge {
+
+        /** Visible size in CSS pixels ("960x540" on a 1080p Fire TV). */
+        @JavascriptInterface
+        fun screenSize(): String {
+            val d = resources.displayMetrics.density
+            var w = web.width
+            var h = web.height
+            if (w <= 0 || h <= 0) { w = resources.displayMetrics.widthPixels; h = resources.displayMetrics.heightPixels }
+            return "${Math.round(w / d)}x${Math.round(h / d)}"
+        }
 
         /** Installed launchable apps as JSON: [{pkg, label, icon, banner}] */
         @JavascriptInterface

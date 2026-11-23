@@ -15,10 +15,17 @@ jobs:
           java-version: "17"
       - name: Build APK
         run: |
-          if [ -f JellyHome.zip ]; then
-            unzip -q -o JellyHome.zip -d /tmp/src
-            cd /tmp/src/JellyHome
+          echo "Files in the repository:"; find . -path ./.git -prune -o -type f -print | head -40
+          GW=$(find . -name gradlew -not -path './.git/*' | head -1)
+          if [ -z "$GW" ]; then
+            ZIP=$(find . -iname '*.zip' -not -path './.git/*' | head -1)
+            if [ -z "$ZIP" ]; then echo "::error::No zip file found. Upload JellyHome.zip from the chat."; exit 1; fi
+            echo "Unpacking $ZIP"
+            unzip -q -o "$ZIP" -d /tmp/src
+            GW=$(find /tmp/src -name gradlew | head -1)
           fi
+          if [ -z "$GW" ]; then echo "::error::The zip doesn't contain the JellyHome project."; exit 1; fi
+          cd "$(dirname "$GW")"
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/JellyHome.apk"

@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JellyHome</title>
+<style>
+:root{--bg:#0b0d12;--fg:#f2f4f8;--dim:#9aa3b2;--accent:#00a4dc;--card:#1a1f2b}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;color:var(--fg);
+  font-family:"Amazon Ember",Roboto,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:var(--bg)}
+.fill{position:absolute;left:0;top:0;width:100%;height:100%}
+
+/* backdrop + trailer */
+.bd{background:#111 center/cover no-repeat;opacity:0;transition:opacity .7s}
+#dim{background:rgba(5,6,9,.82);opacity:0;transition:opacity .45s}
+#trailer{opacity:0;transition:opacity .8s,left .45s,top .45s,width .45s,height .45s}
+#trailer video,#trailer iframe{position:absolute;left:0;top:0;width:100%;height:100%;border:0;object-fit:cover;pointer-events:none;background:#000}
+.trailer-on #trailer{opacity:1}
+#shade{background:
+  linear-gradient(0deg,var(--bg) 0,rgba(11,13,18,.92) 40%,rgba(11,13,18,0) 68%),
+  linear-gradient(90deg,rgba(11,13,18,.95) 0,rgba(11,13,18,.65) 34%,rgba(11,13,18,0) 62%);transition:opacity .8s}
+
+/* top bar */
+#top{position:absolute;right:96px;top:48px;display:flex;align-items:center;gap:20px;font-size:34px;font-weight:500;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+#dot{width:14px;height:14px;border-radius:50%;background:#666}
+#dot.ok{background:#3ccf7a}#dot.bad{background:#e5484d}
+
+/* hero text */
+#hero{position:absolute;left:96px;top:120px;width:860px;transition:opacity .6s}
+#heroTitle{font-size:68px;font-weight:700;line-height:1.05;min-height:80px;display:flex;align-items:flex-end}
+#heroTitle img{max-height:150px;max-width:620px;object-fit:contain;object-position:left bottom}
+#heroSub{font-size:30px;font-weight:600;margin-top:14px;color:#dfe3ea}
+#heroMeta{font-size:26px;color:var(--dim);margin-top:12px}
+#heroMeta span+span:before{content:"·";margin:0 12px;color:#5c6575}
+#heroOverview{font-size:26px;line-height:1.45;margin-top:16px;color:#d4d9e1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;transition:opacity .6s}
+#heroHint{font-size:22px;color:var(--dim);margin-top:18px;transition:opacity .6s}
+.trailer-on #heroOverview{opacity:0}
+.trailer-on #heroHint{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+.trailer-on #shade{opacity:.75}
+
+/* rows */
+#rows{position:absolute;left:0;right:0;top:590px;bottom:0;overflow:hidden}
+#rowsInner{transition:transform .3s ease}
+.row{padding:0 0 22px 96px}
+.row h2{font-size:30px;font-weight:600;color:var(--dim);margin-bottom:6px;transition:color .2s}
+.row.cur h2{color:var(--fg)}
+.track{display:flex;padding:16px 0 20px;transition:transform .3s ease}
+.card{flex:none;position:relative;margin-right:26px;border-radius:12px;overflow:hidden;background:var(--card);transition:transform .2s,box-shadow .2s;cursor:pointer}
+.card.poster{width:200px;height:300px}
+.card.wide{width:384px;height:216px}
+.card.app{width:288px;height:162px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1b2130}
+.card>img{width:100%;height:100%;object-fit:cover;display:block}
+.card.focus{transform:scale(1.08);box-shadow:0 0 0 5px #fff,0 18px 40px rgba(0,0,0,.65);z-index:2}
+.ph{display:flex;align-items:flex-end;padding:18px;font-size:24px;font-weight:700;line-height:1.2}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 16px;background:linear-gradient(0deg,rgba(0,0,0,.85),rgba(0,0,0,0));font-size:20px;line-height:1.3}
+.cap b{display:block;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cap span{color:#c8ced8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{position:absolute;left:0;right:0;bottom:0;height:7px;background:rgba(255,255,255,.25)}
+.bar i{display:block;height:100%;background:var(--accent)}
+.check,.count{position:absolute;right:10px;top:10px;min-width:36px;height:36px;padding:0 8px;border-radius:18px;background:var(--accent);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.appic{width:84px;height:84px;object-fit:contain;border-radius:18px}
+.appic.sym{display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08)}
+.appic.sym svg{width:52px;height:52px;fill:#fff}
+.appic.letter{display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700}
+.card.app .lbl{margin-top:12px;font-size:22px;color:#dfe3ea;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.app.banner .lbl{display:none}
+
+/* overlays */
+.ov{display:none;position:absolute;z-index:10}
+.ov.open{display:block}
+#menu{right:0;top:0;bottom:0;width:680px;background:rgba(14,17,24,.97);padding:110px 64px;box-shadow:-30px 0 60px rgba(0,0,0,.5)}
+#menu h3{font-size:40px;line-height:1.15;margin-bottom:10px}
+#menu p{font-size:24px;color:var(--dim);margin-bottom:40px}
+.opt{font-size:30px;padding:20px 28px;border-radius:12px;margin-bottom:8px;color:#dfe3ea;cursor:pointer}
+.f.focus{background:#fff;color:#0b0d12}
+#settings,#picker{left:0;top:0;width:100%;height:100%;background:rgba(8,10,14,.97)}
+.panel{position:absolute;left:50%;top:70px;bottom:70px;width:980px;margin-left:-490px;display:flex;flex-direction:column}
+.panel h1{font-size:48px;margin-bottom:8px}
+.panel .sub{font-size:24px;color:var(--dim);margin-bottom:28px}
+.scroll{position:relative;flex:1;overflow:hidden}
+.lab{font-size:22px;color:var(--dim);margin:14px 0 8px 4px}
+input.f{display:block;width:100%;font:inherit;font-size:30px;color:#fff;background:#1b2130;border:4px solid transparent;border-radius:12px;padding:16px 20px;outline:none}
+input.f.focus{background:#1b2130;color:#fff;border-color:#fff}
+#sstatus{font-size:24px;min-height:34px;margin:14px 4px;color:#ffcf5c}
+.prow{display:flex;align-items:center;gap:24px;font-size:28px;padding:12px 20px;border-radius:12px;margin-bottom:6px;cursor:pointer}
+.prow img{width:64px;height:64px;object-fit:contain;border-radius:12px}
+.prow img.bn{width:114px}
+.prow .nm{flex:1}
+.prow .pos{font-size:24px;font-weight:700;color:var(--accent)}
+.prow.focus .pos{color:#0b6e95}
+
+/* big trailer view: 90% of the height */
+#rows,#top{transition:opacity .4s}
+.big #dim{opacity:1}
+.big #trailer{left:96px;top:0;width:1728px;height:972px}
+.big #trailer video{object-fit:contain}
+.big #shade,.big #hero,.big #rows,.big #top{opacity:0;pointer-events:none}
+#bigbar{position:absolute;left:96px;right:96px;top:972px;height:108px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .4s;pointer-events:none}
+.big #bigbar{opacity:1}
+#bigTitle{font-size:34px;font-weight:700}
+#bigTitle span{font-weight:400;color:var(--dim);margin-left:16px}
+#bigMsg{font-size:24px;color:var(--dim);white-space:pre}
+
+#toast{position:absolute;left:50%;bottom:60px;transform:translate(-50%,40px);background:rgba(30,35,48,.96);padding:18px 34px;border-radius:40px;font-size:26px;opacity:0;transition:all .3s;z-index:20;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bd0" class="fill bd"></div>
+  <div id="bd1" class="fill bd"></div>
+  <div id="dim" class="fill"></div>
+  <div id="trailer" class="fill"></div>
+  <div id="shade" class="fill"></div>
+  <div id="top"><div id="dot"></div><div id="clock"></div></div>
+  <div id="hero">
+    <div id="heroTitle"></div>
+    <div id="heroSub"></div>
+    <div id="heroMeta"></div>
+    <div id="heroOverview"></div>
+    <div id="heroHint"></div>
+  </div>
+  <div id="rows"><div id="rowsInner"></div></div>
+
+  <div id="menu" class="ov"><h3></h3><p></p><div class="opts"></div></div>
+  <div id="settings" class="ov"><div class="panel"><h1>Home screen settings</h1><div class="sub">Connect to your Jellyfin server and choose what shows on your home screen.</div><div class="scroll"></div></div></div>
+  <div id="picker" class="ov"><div class="panel"><h1>Choose your apps</h1><div class="sub">OK adds or removes an app. ◀ ▶ moves a chosen app earlier or later. Back saves.</div><div class="scroll"></div></div></div>
+  <div id="bigbar"><div id="bigTitle"></div><div id="bigMsg"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var B = window.Android || null;          // native bridge (only inside the Fire TV app)
+  var JELLYFIN_PKG = 'org.jellyfin.androidtv';
+  function $(s) { return document.querySelector(s); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  function grad(name) { var h = hue(name); return 'linear-gradient(135deg,hsl(' + h + ',45%,30%),hsl(' + ((h + 50) % 360) + ',55%,12%))'; }
+
+  // ---------- settings storage ----------
+  function sget(k, d) { try { var v = localStorage.getItem('jh.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function sset(k, v) { try { localStorage.setItem('jh.' + k, JSON.stringify(v)); } catch (e) {} }
+  var cfg = Object.assign({ server: '', userId: '', token: '', userName: '', sound: true, delay: 3, apps: null, demo: false }, sget('cfg', {}));
+  function save() { sset('cfg', cfg); }
+  if (/[?&]demo\b/.test(location.search) && !cfg.token) cfg.demo = true;   // open index.html?demo in a browser to preview
+  var deviceId = sget('deviceId', null);
+  if (!deviceId) { deviceId = 'jh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); sset('deviceId', deviceId); }
+
+  // ---------- layout ----------
+  function fit() {
+    var s = Math.min(innerWidth / 1920, innerHeight / 1080), st = $('#stage');
+    st.style.transform = 'scale(' + s + ')';
+    st.style.left = ((innerWidth - 1920 * s) / 2) + 'px';
+    st.style.top = ((innerHeight - 1080 * s) / 2) + 'px';
+  }
+  function clock() { $('#clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3200); }
+  function setDot(state) { $('#dot').className = state || ''; }
+
+  // ---------- Jellyfin API ----------
+  function authHeader(noToken) {
+    var h = 'MediaBrowser Client="JellyHome", Device="Fire TV", DeviceId="' + deviceId + '", Version="1.0.0"';
+    if (cfg.token && !noToken) h += ', Token="' + cfg.token + '"';
+    return h;
+  }
+  function api(path, method) {
+    return fetch(cfg.server + path, { method: method || 'GET', headers: { 'Authorization': authHeader(), 'Content-Type': 'application/json' } })
+      .then(function (r) { if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; } return r.text(); })
+      .then(function (t) { return t ? JSON.parse(t) : null; });
+  }
+  // Newer Jellyfin (10.9+) moved some routes; try the new one, fall back to the old one on 404.
+  function apiTry(paths, method) {
+    var i = 0;
+    function next() { return api(paths[i], method).catch(function (e) { i++; if ((e.status === 404 || e.status === 405) && i < paths.length) return next(); throw e; }); }
+    return next();
+  }
+  function normServer(s) {
+    s = String(s || '').trim().replace(/\/+$/, '');
+    if (!s) return '';
+    var hadScheme = /^https?:\/\//i.test(s);
+    if (!hadScheme) s = 'http://' + s;
+    if (!hadScheme && !/:\d+(\/|$)/.test(s.replace(/^https?:\/\//, ''))) s += ':8096';
+    return s;
+  }
+
+  var FIELDS = 'Overview,Genres,ProductionYear,OfficialRating,CommunityRating,RunTimeTicks,RemoteTrailers,ChildCount';
+  var Q = '&Fields=' + FIELDS + '&EnableImageTypes=Primary,Backdrop,Thumb,Logo&ImageTypeLimit=1&EnableUserData=true';
+  function rowDefs() {
+    var u = cfg.userId;
+    function items(qs) { return ['/Items?userId=' + u + '&Recursive=true' + qs + Q, '/Users/' + u + '/Items?Recursive=true' + qs + Q]; }
+    return [
+      { title: 'Continue Watching', kind: 'wide', paths: ['/UserItems/Resume?userId=' + u + '&Limit=24&MediaTypes=Video' + Q, '/Users/' + u + '/Items/Resume?Limit=24&MediaTypes=Video' + Q] },
+      { title: 'Next Up', kind: 'wide', paths: ['/Shows/NextUp?UserId=' + u + '&Limit=24' + Q] },
+      { title: 'Recently Added Movies', kind: 'poster', paths: ['/Items/Latest?userId=' + u + '&IncludeItemTypes=Movie&Limit=30' + Q, '/Users/' + u + '/Items/Latest?IncludeItemTypes=Movie&Limit=30' + Q] },
+      { title: 'Shows With New Episodes', kind: 'poster', paths: items('&IncludeItemTypes=Series&SortBy=DateLastContentAdded&SortOrder=Descending&Limit=30') },
+      { title: "Movies You Haven't Seen", kind: 'poster', paths: items('&IncludeItemTypes=Movie&Filters=IsUnplayed&SortBy=Random&Limit=30') },
+      { title: 'Shows to Start', kind: 'poster', paths: items('&IncludeItemTypes=Series&Filters=IsUnplayed&SortBy=Random&Limit=30') }
+    ];
+  }
+  function norm(r) { return Array.isArray(r) ? r : ((r && r.Items) || []); }
+
+  // ---------- image URLs ----------
+  function img(id, type, tag, q) { return cfg.server + '/Items/' + id + '/Images/' + type + '?' + q + (tag ? '&tag=' + tag : ''); }
+  function tags(it) { return it.ImageTags || {}; }
+  function posterUrl(it) {
+    if (cfg.demo) return '';
+    if (tags(it).Primary && it.Type !== 'Episode') return img(it.Id, 'Primary', tags(it).Primary, 'fillHeight=450&quality=90');
+    if (it.SeriesId && it.SeriesPrimaryImageTag) return img(it.SeriesId, 'Primary', it.SeriesPrimaryImageTag, 'fillHeight=450&quality=90');
+    if (tags(it).Primary) return img(it.Id, 'Primary', tags(it).Primary, 'fillHeight=450&quality=90');
+    return '';
+  }
+  function wideUrl(it) {
+    if (cfg.demo) return '';
+    var q = 'fillWidth=576&quality=90';
+    if (it.Type === 'Episode' && tags(it).Primary) return img(it.Id, 'Primary', tags(it).Primary, q);
+    if (tags(it).Thumb) return img(it.Id, 'Thumb', tags(it).Thumb, q);
+    if (it.ParentThumbItemId && it.ParentThumbImageTag) return img(it.ParentThumbItemId, 'Thumb', it.ParentThumbImageTag, q);
+    if (it.BackdropImageTags && it.BackdropImageTags.length) return img(it.Id, 'Backdrop/0', it.BackdropImageTags[0], q);
+    if (it.ParentBackdropItemId && it.ParentBackdropImageTags && it.ParentBackdropImageTags.length) return img(it.ParentBackdropItemId, 'Backdrop/0', it.ParentBackdropImageTags[0], q);
+    return posterUrl(it);
+  }
+  function backdropUrl(it) {
+    if (cfg.demo) return '';
+    var q = 'maxWidth=1920&quality=85';
+    if (it.BackdropImageTags && it.BackdropImageTags.length) return img(it.Id, 'Backdrop/0', it.BackdropImageTags[0], q);
+    if (it.ParentBackdropItemId && it.ParentBackdropImageTags && it.ParentBackdropImageTags.length) return img(it.ParentBackdropItemId, 'Backdrop/0', it.ParentBackdropImageTags[0], q);
+    return '';
+  }
+  function logoUrl(it) {
+    if (cfg.demo) return '';
+    if (tags(it).Logo) return img(it.Id, 'Logo', tags(it).Logo, 'maxWidth=700');
+    if (it.ParentLogoItemId && it.ParentLogoImageTag) return img(it.ParentLogoItemId, 'Logo', it.ParentLogoImageTag, 'maxWidth=700');
+    return '';
+  }
+
+  // ---------- apps ----------
+  var installed = [];
+  var DEMO_APPS = [{ pkg: 'demo.jellyfin', label: 'Jellyfin' }, { pkg: 'demo.yt', label: 'YouTube' }, { pkg: 'demo.music', label: 'Music' }, { pkg: 'demo.vlc', label: 'VLC' }];
+  function loadInstalled() {
+    if (B) { try { installed = JSON.parse(B.getApps()); } catch (e) { installed = []; } }
+    else installed = cfg.demo ? DEMO_APPS : [];
+  }
+  function appItems() {
+    if (cfg.apps == null && B) { cfg.apps = installed.filter(function (a) { return a.pkg === JELLYFIN_PKG; }).map(function (a) { return a.pkg; }); save(); }
+    var list = [];
+    if (!B && cfg.demo) list = DEMO_APPS.slice();
+    else (cfg.apps || []).forEach(function (p) { var a = installed.find(function (x) { return x.pkg === p; }); if (a) list.push(a); });
+    list.push({ special: 'settings', label: 'Home settings' });
+    if (B) list.push({ special: 'firesettings', label: 'Fire TV settings' });
+    return list;
+  }
+  var GEAR = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5L19.4 13zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>';
+  var TV = '<svg viewBox="0 0 24 24"><path d="M21 4H3a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h7v2H7v2h10v-2h-3v-2h7a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zm-1 11H4V6h16v9z"/></svg>';
+
+  // ---------- state ----------
+  var rows = [];      // [{title, kind:'apps'|'wide'|'poster', items:[]}]
+  var R = 0, C = [], offs = [];
+  var ov = null;
+
+  // ---------- rendering ----------
+  function ph(name, noText) { var d = el('div', 'fill ph', noText ? '' : esc(name)); d.style.background = grad(name); return d; }
+  function epLabel(it) {
+    var s = '';
+    if (it.ParentIndexNumber != null && it.IndexNumber != null) s = 'S' + it.ParentIndexNumber + ':E' + it.IndexNumber + ' · ';
+    return s + (it.Name || '');
+  }
+  function cardFor(row, it) {
+    var c;
+    if (row.kind === 'apps') {
+      c = el('div', 'card app' + (it.banner ? ' banner' : ''));
+      if (it.special) c.innerHTML = '<div class="appic sym">' + (it.special === 'settings' ? GEAR : TV) + '</div>';
+      else if (it.icon && it.banner) c.innerHTML = '<img src="' + it.icon + '" alt="">';
+      else if (it.icon) c.innerHTML = '<img class="appic" src="' + it.icon + '" alt="">';
+      else { var l = el('div', 'appic letter', esc(it.label.charAt(0))); l.style.background = grad(it.label); c.appendChild(l); }
+      c.appendChild(el('div', 'lbl', esc(it.label)));
+      return c;
+    }
+    var wide = row.kind === 'wide';
+    c = el('div', 'card ' + (wide ? 'wide' : 'poster'));
+    var url = wide ? wideUrl(it) : posterUrl(it);
+    var name = it.SeriesName || it.Name;
+    if (url) {
+      var im = new Image(); im.alt = '';
+      im.onerror = function () { if (im.parentNode) im.parentNode.removeChild(im); c.insertBefore(ph(name, wide), c.firstChild); };
+      im.src = url; c.appendChild(im);
+    } else c.appendChild(ph(name, wide));
+    if (wide) c.appendChild(el('div', 'cap', '<b>' + esc(name) + '</b>' + (it.Type === 'Episode' ? '<span>' + esc(epLabel(it)) + '</span>' : '')));
+    var ud = it.UserData || {};
+    if (ud.PlayedPercentage > 0 && ud.PlayedPercentage < 100) c.appendChild(el('div', 'bar', '<i style="width:' + ud.PlayedPercentage + '%"></i>'));
+    else if (ud.Played) c.appendChild(el('div', 'check', '✓'));
+    else if (it.Type === 'Series' && ud.UnplayedItemCount) c.appendChild(el('div', 'count', ud.UnplayedItemCount));
+    return c;
+  }
+  function renderRows() {
+    var inner = $('#rowsInner'); inner.innerHTML = ''; offs = [];
+    rows.forEach(function (row, ri) {
+      var sec = el('section', 'row');
+      sec.appendChild(el('h2', null, esc(row.title)));
+      var tr = el('div', 'track');
+      row.items.forEach(function (it, ci) {
+        var c = cardFor(row, it);
+        c.onclick = function () {
+          if (ov || big) return;
+          var same = R === ri && C[ri] === ci;
+          R = ri; C[ri] = ci; updateFocus();
+          if (same) activate();
+        };
+        tr.appendChild(c);
+      });
+      sec.appendChild(tr); inner.appendChild(sec);
+    });
+    updateFocus();
+  }
+  function curItem() { var row = rows[R]; return row ? row.items[C[R] || 0] : null; }
+  function updateFocus() {
+    if (!rows.length) return;
+    R = clamp(R, 0, rows.length - 1);
+    var row = rows[R], ci = clamp(C[R] || 0, 0, row.items.length - 1); C[R] = ci;
+    var secs = $('#rowsInner').children;
+    for (var i = 0; i < secs.length; i++) secs[i].classList.toggle('cur', i === R);
+    var old = document.querySelectorAll('.card.focus');
+    for (var j = 0; j < old.length; j++) old[j].classList.remove('focus');
+    var sec = secs[R], tr = sec.querySelector('.track'), card = tr.children[ci];
+    card.classList.add('focus');
+    $('#rowsInner').style.transform = 'translateY(' + (-sec.offsetTop) + 'px)';
+    // keep the focused card in view, scrolling only when needed
+    var view = 1920 - 96 - 120, off = offs[R] || 0;
+    if (card.offsetLeft < off) off = card.offsetLeft;
+    else if (card.offsetLeft + card.offsetWidth > off + view) off = card.offsetLeft + card.offsetWidth - view;
+    if (ci === 0) off = 0;
+    offs[R] = off; tr.style.transform = 'translateX(' + (-off) + 'px)';
+    if (row.kind !== 'apps') setHero(row.items[ci]);
+    else {
+      stopTrailer();
+      if (!heroItem) { var m = rows[1]; if (m && m.items.length) { setHero(m.items[0]); stopTrailer(); } else welcome(); }
+    }
+  }
+
+  // ---------- hero ----------
+  var heroItem = null, bdFront = 0, bdTok = 0;
+  function swapBackdrop(url, name) {
+    var layers = [$('#bd0'), $('#bd1')], tok = ++bdTok;
+    function apply(u) {
+      if (tok !== bdTok) return;
+      var next = layers[1 - bdFront];
+      next.style.backgroundImage = u ? 'url("' + u + '")' : grad(name);
+      next.style.opacity = 1; layers[bdFront].style.opacity = 0; bdFront = 1 - bdFront;
+    }
+    if (!url) return apply('');
+    var im = new Image(); im.onload = function () { apply(url); }; im.onerror = function () { apply(''); }; im.src = url;
+  }
+  function runtime(t) { var m = Math.round(t / 6e8); return m >= 60 ? Math.floor(m / 60) + 'h ' + (m % 60) + 'm' : m + 'm'; }
+  function fmtTime(sec) { sec = Math.floor(sec); var h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60; return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (s < 10 ? '0' : '') + s; }
+  function welcome() {
+    heroItem = null;
+    $('#heroTitle').textContent = 'JellyHome';
+    $('#heroSub').textContent = '';
+    $('#heroMeta').innerHTML = '';
+    $('#heroOverview').textContent = cfg.token || cfg.demo ? 'Nothing to show from your library yet.' : 'Open Home settings to connect your Jellyfin server.';
+    $('#heroHint').textContent = '';
+    swapBackdrop('', 'JellyHome');
+  }
+  function setHero(it) {
+    if (heroItem && heroItem.Id === it.Id) return;
+    heroItem = it; stopTrailer();
+    var isEp = it.Type === 'Episode';
+    var title = isEp ? (it.SeriesName || it.Name) : it.Name;
+    swapBackdrop(backdropUrl(it), title);
+    var logo = logoUrl(it), ht = $('#heroTitle');
+    if (logo) {
+      ht.innerHTML = '';
+      var im = new Image(); im.alt = title; im.onerror = function () { ht.textContent = title; }; im.src = logo; ht.appendChild(im);
+    } else ht.textContent = title;
+    $('#heroSub').textContent = isEp ? epLabel(it) : '';
+    var m = [];
+    if (it.ProductionYear) m.push(it.ProductionYear);
+    if (it.OfficialRating) m.push(it.OfficialRating);
+    if (it.Type === 'Series' && it.ChildCount) m.push(it.ChildCount + (it.ChildCount === 1 ? ' season' : ' seasons'));
+    else if (it.RunTimeTicks) m.push(runtime(it.RunTimeTicks));
+    if (it.CommunityRating) m.push('★ ' + it.CommunityRating.toFixed(1));
+    if (it.Genres && it.Genres.length) m.push(it.Genres.slice(0, 2).join(', '));
+    $('#heroMeta').innerHTML = m.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('');
+    $('#heroOverview').textContent = it.Overview || '';
+    heroHint();
+    scheduleTrailer(it);
+  }
+
+  // ---------- trailers ----------
+  // As soon as you rest on a title its trailer is looked up and buffered silently.
+  // It starts after the chosen delay; ▲ Up then expands it to 90% of the screen height.
+  var preTimer = null, playTimer = null, trailerTok = 0, trailerCache = {}, cur = null, big = false;
+  function trailerTarget(it) { return (it.Type === 'Episode' || it.Type === 'Season') && it.SeriesId ? it.SeriesId : it.Id; }
+  function ytId(url) { var m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/.exec(url || ''); return m ? m[1] : null; }
+  async function getTrailer(it) {
+    var id = trailerTarget(it);
+    if (trailerCache[id] !== undefined) return trailerCache[id];
+    var u = cfg.userId, remote = null, local = null;
+    try {
+      var src = id === it.Id ? it : await apiTry(['/Items/' + id + '?userId=' + u + '&Fields=RemoteTrailers', '/Users/' + u + '/Items/' + id]);
+      var rt = (src && src.RemoteTrailers) || [];
+      for (var i = 0; i < rt.length && !remote; i++) { var y = ytId(rt[i].Url); if (y) remote = { kind: 'yt', id: y }; }
+    } catch (e) {}
+    try {
+      var lt = await apiTry(['/Items/' + id + '/LocalTrailers?userId=' + u, '/Users/' + u + '/Items/' + id + '/LocalTrailers']);
+      if (lt && lt.length) local = { kind: 'video', url: cfg.server + '/Videos/' + lt[0].Id + '/stream?static=true&api_key=' + cfg.token, fallback: remote };
+    } catch (e) {}
+    var t = local || remote;
+    trailerCache[id] = t;
+    return t;
+  }
+  function heroHint() {
+    $('#heroHint').textContent = cfg.demo ? 'OK for options'
+      : cfg.delay ? 'Trailer loads in the background · OK for options' : 'OK for options · ▶❚❚ to watch the trailer';
+  }
+  function prefetchNeighbors() {
+    var row = rows[R]; if (!row || row.kind === 'apps') return;
+    [C[R] - 1, C[R] + 1].forEach(function (i) { var x = row.items[i]; if (x) getTrailer(x).catch(function () {}); });
+  }
+  function scheduleTrailer(it) {
+    stopTrailer();
+    if (!it || cfg.demo) return;
+    var tok = ++trailerTok;
+    if (big) bigBar(it, 'Loading trailer…');
+    preTimer = setTimeout(function () {
+      getTrailer(it).then(function (t) {
+        if (tok !== trailerTok) return;
+        if (!t) { if (big) bigBar(it, 'No trailer for this title   ·   ◀ ▶ other titles   ·   ▼ back'); return; }
+        mountTrailer(t, tok, it);
+        if (big) startTrailer(tok);
+        else if (cfg.delay) playTimer = setTimeout(function () { startTrailer(tok); }, Math.max(0, cfg.delay * 1000 - 400));
+      }).catch(function () {});
+      prefetchNeighbors();
+    }, big ? 0 : 400);   // short pause so flicking past titles doesn't load every trailer
+  }
+  // Create the player paused and muted so it buffers in the background.
+  function mountTrailer(t, tok, it) {
+    var box = $('#trailer'); box.innerHTML = '';
+    cur = { tok: tok, t: t, it: it, kind: t.kind, started: false, playing: false, ready: false, paused: false, el: null };
+    if (t.kind === 'video') {
+      var v = document.createElement('video');
+      v.preload = 'auto'; v.muted = true; v.setAttribute('playsinline', '');
+      v.onplaying = function () { trailerShown(tok); };
+      v.onended = function () { trailerEnded(tok); };
+      v.onerror = function () {
+        if (!cur || cur.tok !== tok) return;
+        var started = cur.started;
+        if (t.fallback) { mountTrailer(t.fallback, tok, it); if (started) startTrailer(tok); }
+        else trailerEnded(tok);
+      };
+      v.src = t.url; box.appendChild(v);
+      cur.el = v; cur.ready = true;
+    } else {
+      var origin = /^https?:/.test(location.protocol) ? '&origin=' + encodeURIComponent(location.origin) : '';
+      var f = document.createElement('iframe');
+      f.setAttribute('allow', 'autoplay; encrypted-media');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + t.id + '?autoplay=0&mute=1&controls=0&rel=0&playsinline=1&modestbranding=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1' + origin;
+      f.onload = function () {
+        try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1 }), '*'); } catch (e) {}
+        setTimeout(function () { ytReady(tok); }, 1200);   // in case the ready message never arrives
+      };
+      box.appendChild(f); cur.el = f;
+    }
+  }
+  function ytCmd(func, args) {
+    if (!cur || cur.kind !== 'yt' || !cur.el) return;
+    try { cur.el.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*'); } catch (e) {}
+  }
+  function ytReady(tok) {
+    if (!cur || cur.tok !== tok || cur.ready) return;
+    cur.ready = true;
+    if (cur.started) { applyVolume(); ytCmd('playVideo'); }
+  }
+  function applyVolume() {
+    if (!cur || !cur.el) return;
+    var sound = big || cfg.sound;            // the big view always has sound
+    if (cur.kind === 'video') cur.el.muted = !sound;
+    else if (cur.ready) { ytCmd(sound ? 'unMute' : 'mute'); if (sound) ytCmd('setVolume', [100]); }
+  }
+  function startTrailer(tok) {
+    if (!cur || cur.tok !== tok) return;
+    cur.started = true; cur.paused = false; applyVolume();
+    if (cur.kind === 'video') {
+      var v = cur.el, p = v.play();
+      if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(function () {}); });
+    } else {
+      if (cur.ready) ytCmd('playVideo');
+      setTimeout(function () { if (cur && cur.tok === tok && cur.started) trailerShown(tok); }, 2500);
+    }
+  }
+  function trailerShown(tok) {
+    if (!cur || cur.tok !== tok || cur.playing) return;
+    cur.playing = true;
+    $('#stage').classList.add('trailer-on');
+    if (big) bigBar(cur.it);
+    else $('#heroHint').textContent = '▲ Up to watch the trailer bigger · OK for options';
+  }
+  function trailerEnded(tok) {
+    if (!cur || cur.tok !== tok) return;
+    exitBig(); stopTrailer(); heroHint();
+  }
+  function stopTrailer() {
+    clearTimeout(preTimer); clearTimeout(playTimer); trailerTok++;
+    $('#stage').classList.remove('trailer-on');
+    if (cur && cur.kind === 'video' && cur.el) { try { cur.el.pause(); cur.el.removeAttribute('src'); cur.el.load(); } catch (e) {} }
+    cur = null; $('#trailer').innerHTML = '';
+  }
+  window.addEventListener('message', function (e) {
+    if (!cur || cur.kind !== 'yt' || !cur.el || e.source !== cur.el.contentWindow) return;
+    var d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+    if (!d) return;
+    var tok = cur.tok;
+    if (d.event === 'onReady' || d.event === 'initialDelivery') ytReady(tok);
+    var state = d.event === 'onStateChange' ? d.info : (d.event === 'infoDelivery' && d.info ? d.info.playerState : undefined);
+    if (state === 1 && cur.started) trailerShown(tok);
+    if (state === 0 || d.event === 'onError') trailerEnded(tok);
+  });
+
+  // ---------- big trailer view (90% of the screen height) ----------
+  function bigBar(it, msg) {
+    if (!it) return;
+    var title = it.Type === 'Episode' ? it.SeriesName : it.Name;
+    $('#bigTitle').innerHTML = esc(title) + (it.ProductionYear ? '<span>' + it.ProductionYear + '</span>' : '');
+    $('#bigMsg').textContent = msg || '◀ ▶ other titles   ·   OK options   ·   ▶❚❚ pause   ·   ▼ back';
+  }
+  function enterBig() {
+    if (!cur) return;
+    big = true; $('#stage').classList.add('big'); bigBar(cur.it);
+    if (!cur.started) startTrailer(cur.tok); else applyVolume();
+  }
+  function exitBig() {
+    if (!big) return;
+    big = false; $('#stage').classList.remove('big'); applyVolume();
+  }
+  function bigTrailer(it) {
+    if (cfg.demo) return toast('Trailers play from your Jellyfin server. Connect one in Home settings.');
+    if (cur && cur.it && cur.it.Id === it.Id) return enterBig();
+    big = true; $('#stage').classList.add('big'); scheduleTrailer(it);
+  }
+  function togglePause() {
+    if (!cur || !cur.started) return;
+    cur.paused = !cur.paused;
+    if (cur.kind === 'video') { if (cur.paused) cur.el.pause(); else cur.el.play(); }
+    else ytCmd(cur.paused ? 'pauseVideo' : 'playVideo');
+    bigBar(cur.it, cur.paused ? 'Paused   ·   ▶❚❚ to continue   ·   ▼ back' : null);
+  }
+
+  // ---------- playback ----------
+  function streamUrl(it) { return cfg.server + '/Videos/' + it.Id + '/stream?static=true&api_key=' + cfg.token; }
+  function play(it, posMs) {
+    var title = it.Type === 'Episode' ? (it.SeriesName + ' – ' + epLabel(it)) : it.Name;
+    if (cfg.demo) return toast('Demo: this would play “' + title + '”');
+    if (B) B.playVideo(streamUrl(it), title, Math.round(posMs || 0));
+    else window.open(streamUrl(it), '_blank');
+  }
+  async function playSeries(s) {
+    if (cfg.demo) return play(s, 0);
+    toast('Finding the next episode…');
+    try {
+      var r = await api('/Shows/NextUp?UserId=' + cfg.userId + '&SeriesId=' + s.Id + '&Limit=1');
+      var ep = r && r.Items && r.Items[0];
+      if (!ep) {
+        var e = await api('/Shows/' + s.Id + '/Episodes?UserId=' + cfg.userId + '&IsMissing=false');
+        var list = (e && e.Items) || [];
+        ep = list.filter(function (x) { return !(x.UserData && x.UserData.Played); })[0] || list[0];
+      }
+      if (!ep) return toast('No episodes found');
+      play(ep, ((ep.UserData && ep.UserData.PlaybackPositionTicks) || 0) / 1e4);
+    } catch (err) { toast('Couldn’t load episodes'); }
+  }
+  async function markPlayed(it, played) {
+    closeOv(true);
+    if (cfg.demo) return toast('Demo: marked');
+    var m = played ? 'POST' : 'DELETE';
+    try {
+      await apiTry(['/UserPlayedItems/' + it.Id + '?userId=' + cfg.userId, '/Users/' + cfg.userId + '/PlayedItems/' + it.Id], m);
+      toast(played ? 'Marked as watched' : 'Marked as unwatched'); refresh();
+    } catch (e) { toast('Couldn’t update'); }
+  }
+
+  // ---------- overlays ----------
+  function ovItems() { return ov ? [].slice.call(ov.root.querySelectorAll('.f')) : []; }
+  function ovFocus(i) {
+    var items = ovItems(); if (!items.length) return;
+    ov.idx = clamp(i, 0, items.length - 1);
+    items.forEach(function (x, j) { x.classList.toggle('focus', j === ov.idx); });
+    var x = items[ov.idx], sc = x.closest('.scroll');
+    if (sc) {
+      if (x.offsetTop < sc.scrollTop) sc.scrollTop = x.offsetTop - 10;
+      else if (x.offsetTop + x.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTop = x.offsetTop + x.offsetHeight - sc.clientHeight + 10;
+    }
+  }
+  function openOv(o) {
+    if (ov) ov.root.classList.remove('open');
+    ov = o; o.root.classList.add('open');
+    if (!o.keep) { exitBig(); stopTrailer(); }   // the options menu lets the trailer keep playing
+    ovFocus(o.idx || 0);
+  }
+  function closeOv(silent) {
+    if (!ov) return;
+    var a = document.activeElement; if (a && a.blur) a.blur();
+    ov.root.classList.remove('open'); ov = null;
+    if (!silent) { heroItem = null; updateFocus(); }
+  }
+  function opt(label, fn) { var d = el('div', 'f opt', esc(label)); d.onclick = function () { var i = ovItems().indexOf(d); if (i >= 0) ovFocus(i); fn(); }; return d; }
+
+  function openMenu(it) {
+    var root = $('#menu'), box = root.querySelector('.opts'); box.innerHTML = '';
+    var isEp = it.Type === 'Episode', ud = it.UserData || {}, pos = ud.PlaybackPositionTicks || 0;
+    root.querySelector('h3').textContent = isEp ? it.SeriesName : it.Name;
+    root.querySelector('p').textContent = isEp ? epLabel(it) : [it.ProductionYear, it.Type === 'Series' ? 'Series' : 'Movie'].filter(Boolean).join(' · ');
+    if (it.Type === 'Series') box.appendChild(opt('Play next episode', function () { closeOv(true); playSeries(it); }));
+    else if (pos > 0) {
+      box.appendChild(opt('Resume from ' + fmtTime(pos / 1e7), function () { closeOv(true); play(it, pos / 1e4); }));
+      box.appendChild(opt('Play from the beginning', function () { closeOv(true); play(it, 0); }));
+    } else box.appendChild(opt('Play', function () { closeOv(true); play(it, 0); }));
+    box.appendChild(opt('Watch the trailer big', function () { closeOv(true); bigTrailer(it); }));
+    box.appendChild(opt(ud.Played ? 'Mark as unwatched' : 'Mark as watched', function () { markPlayed(it, !ud.Played); }));
+    if (B && installed.some(function (a) { return a.pkg === JELLYFIN_PKG; })) box.appendChild(opt('Open the Jellyfin app', function () { closeOv(true); B.launchApp(JELLYFIN_PKG); }));
+    openOv({ root: root, idx: 0, keep: true, back: function () { closeOv(true); } });
+  }
+
+  function openSettings(statusMsg, focusIdx) {
+    var root = $('#settings'), sc = root.querySelector('.scroll'); sc.innerHTML = ''; sc.scrollTop = 0;
+    function field(label, id, value, type, placeholder) {
+      sc.appendChild(el('div', 'lab', esc(label)));
+      var i = el('input', 'f'); i.id = id; i.type = type || 'text'; i.value = value || ''; i.placeholder = placeholder || '';
+      i.setAttribute('autocapitalize', 'off'); i.setAttribute('autocomplete', 'off'); i.spellcheck = false;
+      i.onclick = function () { var k = ovItems().indexOf(i); if (k >= 0) ovFocus(k); i.focus(); };
+      sc.appendChild(i);
+    }
+    field('Jellyfin server address', 'f_server', cfg.server, 'url', 'e.g. 192.168.1.20:8096');
+    field('Username', 'f_user', cfg.userName);
+    field('Password', 'f_pass', '', 'password');
+    sc.appendChild(opt(cfg.token ? 'Sign in again' : 'Sign in', doLogin));
+    var st = el('div', null, esc(statusMsg || (cfg.token ? 'Signed in as ' + cfg.userName + ' on ' + cfg.server : ''))); st.id = 'sstatus'; sc.appendChild(st);
+    var snd = opt('', function () { cfg.sound = !cfg.sound; save(); paintS(); });
+    var dly = opt('', function () { var v = [2, 3, 5, 8, 0], i = v.indexOf(cfg.delay); cfg.delay = v[(i + 1) % v.length]; save(); paintS(); });
+    function paintS() {
+      snd.textContent = 'Trailer sound: ' + (cfg.sound ? 'On' : 'Off');
+      dly.textContent = 'Trailers start: ' + (cfg.delay ? 'after ' + cfg.delay + ' seconds' : 'Off (press ▶❚❚ to watch)');
+    }
+    paintS(); sc.appendChild(snd); sc.appendChild(dly);
+    if (B) sc.appendChild(opt('Choose apps for the home screen', openPicker));
+    if (B) sc.appendChild(opt('Open Fire TV settings', function () { B.openSettings(); }));
+    if (!cfg.token) sc.appendChild(opt(cfg.demo ? 'Demo mode is on' : 'Try a demo without a server', startDemo));
+    if (cfg.token || cfg.demo) sc.appendChild(opt(cfg.demo ? 'Leave demo mode' : 'Sign out', signOut));
+    if (cfg.token || cfg.demo) sc.appendChild(opt('Done', function () { closeOv(); }));
+    openOv({ root: root, idx: focusIdx || 0, back: function () { if (cfg.token || cfg.demo) closeOv(); } });
+  }
+  function sstatus(m) { var s = $('#sstatus'); if (s) s.textContent = m; }
+  async function doLogin() {
+    var server = normServer($('#f_server').value), user = $('#f_user').value.trim(), pass = $('#f_pass').value;
+    if (!server || !user) return sstatus('Enter the server address and your username.');
+    sstatus('Signing in to ' + server + '…');
+    try {
+      var r = await fetch(server + '/Users/AuthenticateByName', {
+        method: 'POST', headers: { 'Authorization': authHeader(true), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ Username: user, Pw: pass })
+      });
+      if (r.status === 401) throw new Error('Wrong username or password.');
+      if (!r.ok) throw new Error('The server answered with error ' + r.status + '.');
+      var j = await r.json();
+      cfg.server = server; cfg.token = j.AccessToken; cfg.userId = j.User.Id; cfg.userName = j.User.Name; cfg.demo = false;
+      save(); trailerCache = {}; loadInstalled();
+      sstatus('Signed in as ' + cfg.userName + '. Loading your library…');
+      await refresh(true);
+      closeOv();
+    } catch (e) {
+      sstatus(e instanceof TypeError ? 'Can’t reach ' + server + '. Check the address, and that the Fire TV is on the same network.' : e.message);
+    }
+  }
+  function signOut() {
+    if (cfg.token && !cfg.demo) api('/Sessions/Logout', 'POST').catch(function () {});
+    cfg.token = ''; cfg.userId = ''; cfg.demo = false; save(); trailerCache = {};
+    loadInstalled(); rows = [{ title: 'Apps', kind: 'apps', items: appItems() }]; R = 0; C = []; renderRows(); welcome();
+    openSettings('Signed out.');
+  }
+  function startDemo() {
+    if (cfg.token) return;
+    cfg.demo = true; save(); loadInstalled(); refresh(true).then(function () { closeOv(); });
+  }
+
+  function openPicker() {
+    var root = $('#picker'), sc = root.querySelector('.scroll'); sc.innerHTML = ''; sc.scrollTop = 0;
+    if (!cfg.apps) cfg.apps = [];
+    if (!installed.length) sc.appendChild(el('div', 'sub', 'No apps found.'));
+    installed.forEach(function (a) {
+      var r = el('div', 'f prow');
+      r.innerHTML = (a.icon ? '<img src="' + a.icon + '" class="' + (a.banner ? 'bn' : '') + '" alt="">' : '') + '<span class="nm">' + esc(a.label) + '</span><span class="pos"></span>';
+      r._pkg = a.pkg;
+      r.onclick = function () { var k = ovItems().indexOf(r); if (k >= 0) ovFocus(k); toggleApp(a.pkg); };
+      sc.appendChild(r);
+    });
+    function paint() { ovItems().forEach(function (r) { var i = cfg.apps.indexOf(r._pkg); r.querySelector('.pos').textContent = i >= 0 ? '#' + (i + 1) + '  ✓' : ''; }); }
+    function toggleApp(p) { var i = cfg.apps.indexOf(p); if (i >= 0) cfg.apps.splice(i, 1); else cfg.apps.push(p); save(); paint(); }
+    openOv({
+      root: root, idx: 0,
+      back: function () { rebuildApps(); openSettings('Apps saved.'); },
+      lr: function (d) {
+        var p = ovItems()[ov.idx]._pkg, i = cfg.apps.indexOf(p), j = i + d;
+        if (i < 0 || j < 0 || j >= cfg.apps.length) return;
+        cfg.apps[i] = cfg.apps[j]; cfg.apps[j] = p; save(); paint();
+      }
+    });
+    paint();
+  }
+  function rebuildApps() { if (rows[0] && rows[0].kind === 'apps') { rows[0].items = appItems(); renderRows(); } }
+
+  // ---------- loading ----------
+  var DEMO = {
+    names: ['The Glass Harbor', 'Nightfall Protocol', 'Paper Comets', 'Saltwater Kings', 'The Last Lighthouse', 'Orbit of Ash', 'Velvet Static', 'Northbound', 'Hollow Pines', 'A Quiet Engine', 'Midnight Atlas', 'Copper Sky'],
+    shows: ['Station Eleven Below', 'The Understudy', 'Long Way Home', 'Signal & Noise', 'Fieldwork', 'Ninth Street', 'Deep Field', 'The Borrowers Club'],
+    genres: [['Drama', 'Mystery'], ['Sci-Fi', 'Thriller'], ['Comedy'], ['Adventure', 'Family'], ['Documentary']]
+  };
+  function demoItem(name, i, type) {
+    return { Id: 'd' + type + i, Name: name, Type: type, ProductionYear: 2011 + (i * 3) % 14, OfficialRating: ['PG', 'PG-13', 'R', 'TV-14'][i % 4],
+      RunTimeTicks: (88 + i * 7) * 6e8, CommunityRating: 6.2 + (i % 7) * 0.4, Genres: DEMO.genres[i % 5], ChildCount: type === 'Series' ? 1 + i % 4 : 0,
+      Overview: 'A placeholder description for the demo. With your Jellyfin server connected, this shows the real plot summary, artwork and a trailer that plays here after a few seconds.',
+      UserData: { PlayedPercentage: type === 'Movie' && i % 3 === 0 ? 20 + i * 5 : 0, PlaybackPositionTicks: i % 3 === 0 ? 12e9 : 0 } };
+  }
+  function demoRows() {
+    var movies = DEMO.names.map(function (n, i) { return demoItem(n, i, 'Movie'); });
+    var shows = DEMO.shows.map(function (n, i) { return demoItem(n, i, 'Series'); });
+    var eps = DEMO.shows.slice(0, 5).map(function (n, i) { var e = demoItem('Chapter ' + (i + 2), i, 'Episode'); e.Id = 'de' + i; e.SeriesName = n; e.ParentIndexNumber = 1 + i % 2; e.IndexNumber = i + 2; return e; });
+    return [
+      { title: 'Continue Watching', kind: 'wide', items: movies.filter(function (m) { return m.UserData.PlayedPercentage; }) },
+      { title: 'Next Up', kind: 'wide', items: eps },
+      { title: 'Recently Added Movies', kind: 'poster', items: movies },
+      { title: 'Shows With New Episodes', kind: 'poster', items: shows }
+    ];
+  }
+  function focusKey() { var it = curItem(); return rows[R] ? { t: rows[R].title, id: it && (it.Id || it.pkg || it.special) } : null; }
+  async function refresh(resetFocus) {
+    var key = resetFocus ? null : focusKey();
+    var appRow = { title: 'Apps', kind: 'apps', items: appItems() }, media = [];
+    if (cfg.demo) { media = demoRows(); setDot(''); }
+    else if (cfg.token) {
+      var defs = rowDefs(), auth = false;
+      var res = await Promise.all(defs.map(function (d) {
+        return apiTry(d.paths).then(norm).catch(function (e) { if (e.status === 401) auth = true; return null; });
+      }));
+      if (auth) { cfg.token = ''; save(); setDot('bad'); rows = [appRow]; renderRows(); welcome(); openSettings('Your sign-in expired. Please sign in again.'); return; }
+      if (res.every(function (x) { return x === null; })) { setDot('bad'); toast('Can’t reach your Jellyfin server — showing apps only'); }
+      else setDot('ok');
+      defs.forEach(function (d, i) { if (res[i] && res[i].length) media.push({ title: d.title, kind: d.kind, items: res[i] }); });
+    }
+    rows = [appRow].concat(media);
+    var prevHero = heroItem;
+    R = media.length ? 1 : 0; C = [];
+    if (key) rows.forEach(function (row, ri) {
+      if (row.title !== key.t) return;
+      R = ri;
+      row.items.forEach(function (it, ci) { if ((it.Id || it.pkg || it.special) === key.id) C[ri] = ci; });
+    });
+    heroItem = null;
+    renderRows();
+    if (!media.length && !prevHero) welcome();
+  }
+
+  // ---------- input ----------
+  function activate() {
+    var row = rows[R], it = curItem(); if (!it) return;
+    if (row.kind === 'apps') {
+      if (it.special === 'settings') return openSettings();
+      if (it.special === 'firesettings') return B && B.openSettings();
+      if (B) B.launchApp(it.pkg); else toast('Demo: this would open ' + it.label);
+      return;
+    }
+    openMenu(it);
+  }
+  function homeBack() {
+    if ((C[R] || 0) > 0) { C[R] = 0; updateFocus(); }
+    else if (R !== (rows.length > 1 ? 1 : 0)) { R = rows.length > 1 ? 1 : 0; updateFocus(); }
+  }
+  function handle(a) {
+    if (ov) {
+      if (a === 'up') ovFocus(ov.idx - 1);
+      else if (a === 'down') ovFocus(ov.idx + 1);
+      else if (a === 'ok') { var x = ovItems()[ov.idx]; if (x) { if (x.tagName === 'INPUT') { if (x.type === 'password') x.value = ''; x.focus(); x.click(); } else x.click(); } }
+      else if (a === 'back') ov.back();
+      else if ((a === 'left' || a === 'right') && ov.lr) ov.lr(a === 'left' ? -1 : 1);
+      return;
+    }
+    if (big) {
+      if (a === 'down' || a === 'back') exitBig();
+      else if (a === 'left' || a === 'right') { C[R] = (C[R] || 0) + (a === 'left' ? -1 : 1); updateFocus(); }
+      else if (a === 'ok') { var bi = curItem(); if (bi) openMenu(bi); }
+      else if (a === 'play') togglePause();
+      return;
+    }
+    if (!rows.length) return;
+    if (a === 'left') { C[R] = (C[R] || 0) - 1; updateFocus(); }
+    else if (a === 'right') { C[R] = (C[R] || 0) + 1; updateFocus(); }
+    else if (a === 'up') {
+      // ▲ on a title whose trailer is playing (or ready, when auto-start is off) opens the big view
+      if (rows[R].kind !== 'apps' && cur && (cur.playing || (!cfg.delay && cur.ready))) enterBig();
+      else { R--; updateFocus(); }
+    }
+    else if (a === 'down') { R++; updateFocus(); }
+    else if (a === 'ok') activate();
+    else if (a === 'back') homeBack();
+    else if (a === 'play') { var it = curItem(); if (it && rows[R].kind !== 'apps') bigTrailer(it); }
+  }
+  var KEYS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down', 13: 'ok', 23: 'ok', 27: 'back', 8: 'back', 179: 'play', 85: 'play', 415: 'play', 19: 'play' };
+  document.addEventListener('keydown', function (e) {
+    var ae = document.activeElement;
+    if (ae && ae.tagName === 'INPUT') {          // typing in a settings field
+      if (e.keyCode === 13 || e.keyCode === 40 || e.keyCode === 38 || e.keyCode === 27) {
+        e.preventDefault(); ae.blur();
+        if (e.keyCode === 13 || e.keyCode === 40) ovFocus(ov.idx + 1);
+        else if (e.keyCode === 38) ovFocus(ov.idx - 1);
+      }
+      return;
+    }
+    var a = KEYS[e.keyCode]; if (!a) return;
+    e.preventDefault(); handle(a);
+  });
+
+  // ---------- hooks called by the Android app ----------
+  window.jhBack = function () {
+    var ae = document.activeElement;
+    if (ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+    handle('back');
+  };
+  window.jhPause = function () { exitBig(); stopTrailer(); };
+  window.jhResume = function () {
+    loadInstalled();
+    if (ov) return;
+    if (cfg.token || cfg.demo) refresh(); else rebuildApps();
+  };
+
+  // ---------- boot ----------
+  window.addEventListener('resize', fit); fit();
+  clock(); setInterval(clock, 10000);
+  loadInstalled();
+  if (cfg.token || cfg.demo) refresh(true);
+  else { rows = [{ title: 'Apps', kind: 'apps', items: appItems() }]; renderRows(); welcome(); openSettings(); }
+  setInterval(function () { if (!ov && !big && cfg.token && !$('#stage').classList.contains('trailer-on')) refresh(); }, 15 * 60 * 1000);
+})();
+</script>
+</body>
+</html>

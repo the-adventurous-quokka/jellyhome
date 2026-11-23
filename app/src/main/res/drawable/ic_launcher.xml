@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp" android:height="96dp"
+    android:viewportWidth="96" android:viewportHeight="96">
+    <path android:fillColor="#0B0D12" android:pathData="M20,0h56a20,20 0,0 1,20 20v56a20,20 0,0 1,-20 20h-56a20,20 0,0 1,-20 -20v-56a20,20 0,0 1,20 -20z" />
+    <!-- house outline -->
+    <path android:fillColor="#00A4DC" android:pathData="M48,18L16,44h9v32h46v-32h9z" />
+    <!-- play triangle -->
+    <path android:fillColor="#FFFFFF" android:pathData="M42,48v20l17,-10z" />
+</vector>
